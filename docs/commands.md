@@ -55,8 +55,9 @@ Show help on sub command:
 
 Show cached problems.
 
-* `-d` to delete specific cached problem.
-* `-a` to delete all cached problems.
+* `leetcode cache <id>` to show specific problem cache.
+* `-d <id>` to delete specific problem cache.
+* `-d` to delete all cached problems.
 
 *Examples*
 
@@ -67,6 +68,10 @@ Show cache:
 	problems                                            148.48K    2 hours ago
 	1.two-sum.algorithms                                  2.52K    2 hours ago
 	......
+
+Delete cache for problem 537:
+
+	$ leetcode cache -d 537
 
 # list
 
@@ -89,6 +94,7 @@ Navigate the problems.
 	* database
 	* shell
 * `-s` to show statistic counters.
+* `-e` to open editor with generated source file.
 * `leetcode list <keyword>` to search by keyword matching.
 
 *Examples*
@@ -150,8 +156,7 @@ Display problem details. With `-g`/`-l`/`-x`, the code template could be auto ge
 
 * `-g` to generate source file.
 * `-x` to add problem description in the generated source file.
-* `-t` to show code template.
-* `-d` to show problem description.
+* `-c` to only show code template.
 * `-l` to choose programming language. (Depends on which langs are provided on leetcode)
 	* bash
 	* c
@@ -203,7 +208,7 @@ Display problem details. With `-g`/`-l`/`-x`, the code template could be auto ge
 
 Only show the code template:
 
-	$ leetcode show -t --no-desc 1
+	$ leetcode show -c 1
 	class Solution {
 	public:
 		vector<int> twoSum(vector<int>& nums, int target) {
@@ -367,7 +372,7 @@ Display version information.
 Short:
 
 	$ leetcode version
-	2.0.3
+	2.1.0
 
 Verbose:
 
@@ -377,7 +382,7 @@ Verbose:
 	| | ___  ___| |_  ___  ___   __| | ___
 	| |/ _ \/ _ \ __|/ __|/ _ \ / _` |/ _ \
 	| |  __/  __/ |_  (__| (_) | (_| |  __/
-	|_|\___|\___|\__|\___|\___/ \__,_|\___|  CLI v2.0.3
+	|_|\___|\___|\__|\___|\___/ \__,_|\___|  CLI v2.1.0
 
 	[Environment]
 	Cache:  /Users/skygragon/.lc/
@@ -399,3 +404,4 @@ Verbose:
 	retry                default
 	cache                default
 	leetcode             default
+
