@@ -1,51 +1,64 @@
-var assert = require('chai').assert;
-var rewire = require('rewire');
-var _ = require('underscore');
+'use strict';
+const assert = require('chai').assert;
+const rewire = require('rewire');
+const _ = require('underscore');
+
+const th = require('./helper');
 
 describe('config', function() {
-  it('should ok w/o local config', function() {
-    var h = rewire('../lib/helper');
-    h.getConfigFile = function() {
-      return 'local-config-not-exist-at-all';
-    };
+  let config;
+  const FILE = './tmp/config.json';
 
-    var config = rewire('../lib/config');
+  beforeEach(function() {
+    th.clean();
+
+    const h = rewire('../lib/helper');
+    h.getConfigFile = () => FILE;
+
+    config = rewire('../lib/config');
     config.__set__('h', h);
+  });
+
+  function createConfigFile(data) {
+    const fs = require('fs');
+    fs.writeFileSync(FILE, JSON.stringify(data));
+  }
+
+  it('should ok w/o local config', function() {
+    const DEFAULT_CONFIG = config.__get__('DEFAULT_CONFIG');
     config.init();
 
-    var expect = config.getDefaultConfig();
-    var actual = _.extendOwn({}, config); // remove 'init' function
+    let actual = config.getAll();
+    let expect = DEFAULT_CONFIG;
     assert.deepEqual(actual, expect);
 
-    expect = config.getUserConfig();
-    actual = config.__get__('DEFAULT_USER_CONFIG');
+    actual = config.getAll(true);
+    expect = _.omit(expect, 'sys');
     assert.deepEqual(actual, expect);
   });
 
   it('should ok w/ local config', function() {
-    var localConfig = {
-      AUTO_LOGIN: false,
-      LANG:       'ruby',
-      USE_COLOR:  false
-    };
-
-    var h = rewire('../lib/helper');
-    h.getFileData = function() {
-      return JSON.stringify(localConfig);
-    };
-
-    var config = rewire('../lib/config');
-    config.__set__('h', h);
+    createConfigFile({
+      autologin: {enable: false},
+      code:      {lang: 'ruby'},
+      color:     {enable: false}
+    });
     config.init();
 
-    var expect = config.getDefaultConfig();
-    var actual = _.extendOwn({}, config); // remove 'init' function
-    _.extendOwn(expect, localConfig);
-    assert.deepEqual(actual, expect);
+    assert.equal(config.autologin.enable, false);
+    assert.equal(config.code.lang, 'ruby');
+    assert.equal(config.color.enable, false);
+    assert.equal(config.code.editor, 'vim');
+  });
 
-    expect = config.getUserConfig();
-    actual = config.__get__('DEFAULT_USER_CONFIG');
-    _.extendOwn(actual, localConfig);
-    assert.deepEqual(actual, expect);
+  it('should remove legacy keys', function() {
+    createConfigFile({
+      USE_COLOR: true,
+      code:      {lang: 'ruby'}
+    });
+    config.init();
+
+    assert.equal(config.USE_COLOR, undefined);
+    assert.equal(config.code.lang, 'ruby');
   });
 });

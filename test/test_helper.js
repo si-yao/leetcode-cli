@@ -1,11 +1,23 @@
-var assert = require('chai').assert;
+'use strict';
+const path = require('path');
 
-var chalk = require('../lib/chalk');
-var h = require('../lib/helper');
+const assert = require('chai').assert;
+const rewire = require('rewire');
+const _ = require('underscore');
 
-chalk.init();
+const chalk = require('../lib/chalk');
 
 describe('helper', function() {
+  let h;
+
+  before(function() {
+    chalk.init();
+  });
+
+  beforeEach(function() {
+    h = rewire('../lib/helper');
+  });
+
   describe('#prettyState', function() {
     it('should ok w/ color', function() {
       chalk.enabled = true;
@@ -45,6 +57,20 @@ describe('helper', function() {
       assert.equal(h.prettyText('text'), 'text');
     });
   }); // #prettyText
+
+  describe('#prettyLevel', function() {
+    it('should ok w/ color', function() {
+      chalk.enabled = true;
+
+      assert.equal(h.prettyLevel('Easy'), chalk.green('Easy'));
+      assert.equal(h.prettyLevel('Medium'), chalk.yellow('Medium'));
+      assert.equal(h.prettyLevel('Hard'), chalk.red('Hard'));
+      assert.equal(h.prettyLevel('easy  '), chalk.green('easy  '));
+      assert.equal(h.prettyLevel('medium'), chalk.yellow('medium'));
+      assert.equal(h.prettyLevel('hard  '), chalk.red('hard  '));
+      assert.equal(h.prettyLevel('unknown'), 'unknown');
+    });
+  }); // #prettyLevel
 
   describe('#prettySize', function() {
     it('should ok', function() {
@@ -105,7 +131,7 @@ describe('helper', function() {
       assert.equal(h.langToExt('javascript'), '.js');
       assert.equal(h.langToExt('mysql'), '.sql');
       assert.equal(h.langToExt('python'), '.py');
-      assert.equal(h.langToExt('python3'), '.py3');
+      assert.equal(h.langToExt('python3'), '.python3.py');
       assert.equal(h.langToExt('ruby'), '.rb');
       assert.equal(h.langToExt('scala'), '.scala');
       assert.equal(h.langToExt('swift'), '.swift');
@@ -124,6 +150,7 @@ describe('helper', function() {
       assert.equal(h.extToLang('c:/file.js'), 'javascript');
       assert.equal(h.extToLang('c:/Users/skygragon/file.py'), 'python');
       assert.equal(h.extToLang('c:/Users/skygragon/file.py3'), 'python3');
+      assert.equal(h.extToLang('c:/Users/skygragon/file.python3.py'), 'python3');
       assert.equal(h.extToLang('~/file.rb'), 'ruby');
       assert.equal(h.extToLang('/tmp/file.scala'), 'scala');
       assert.equal(h.extToLang('~/leetcode/file.swift'), 'swift');
@@ -134,8 +161,8 @@ describe('helper', function() {
 
   describe('#langToCommentStyle', function() {
     it('should ok', function() {
-      var C_STYLE = {start: '/*', line: ' *', end: ' */'};
-      var RUBY_STYLE = {start: '#', line: '#', end: '#'};
+      const C_STYLE = {start: '/*', line: ' *', end: ' */'};
+      const RUBY_STYLE = {start: '#', line: '#', end: '#'};
 
       assert.deepEqual(h.langToCommentStyle('bash'), RUBY_STYLE);
       assert.deepEqual(h.langToCommentStyle('c'), C_STYLE);
@@ -154,38 +181,59 @@ describe('helper', function() {
   }); // #langToCommentStyle
 
   describe('#dirAndFiles', function() {
+    const HOME = path.join(__dirname, '..');
+
     it('should ok', function() {
       process.env.HOME = '/home/skygragon';
 
-      assert.equal(h.getHomeDir(), '/home/skygragon');
-      assert.equal(h.getCacheDir(), '/home/skygragon/.lc');
-      assert.equal(h.getCacheFile('xxx'), '/home/skygragon/.lc/xxx.json');
-      assert.equal(h.getConfigFile(), '/home/skygragon/.lcconfig');
-      assert.equal(h.getFilename('/home/skygragon/.lc/xxx.json'), 'xxx');
+      assert.equal(h.getUserHomeDir(), '/home/skygragon');
+      assert.equal(h.getHomeDir(), '/home/skygragon/.lc');
+      assert.equal(h.getCacheDir(), '/home/skygragon/.lc/cache');
+      assert.equal(h.getCacheFile('xxx'), '/home/skygragon/.lc/cache/xxx.json');
+      assert.equal(h.getConfigFile(), '/home/skygragon/.lc/config.json');
+      assert.equal(h.getFilename('/home/skygragon/.lc/cache/xxx.json'), 'xxx');
 
       process.env.HOME = '';
       process.env.USERPROFILE = 'C:\\Users\\skygragon';
-      assert.equal(h.getHomeDir(), 'C:\\Users\\skygragon');
+      assert.equal(h.getUserHomeDir(), 'C:\\Users\\skygragon');
     });
 
-    it('should getDirData ok', function() {
-      var files = h.getDirData(['lib', 'plugins']);
+    it('should getCodeDir ok', function() {
+      assert.equal(h.getCodeDir(), HOME);
+      assert.equal(h.getCodeDir('.'), HOME);
+      assert.equal(h.getCodeDir('icons'), path.join(HOME, 'icons'));
+      assert.equal(h.getCodeDir('lib/plugins'), path.join(HOME, 'lib', 'plugins'));
+    });
+
+    it('should getCodeDirData ok', function() {
+      const files = h.getCodeDirData('lib/plugins');
       assert.equal(files.length, 3);
       assert.equal(files[0].name, 'cache');
       assert.equal(files[1].name, 'leetcode');
       assert.equal(files[2].name, 'retry');
     });
+
+    it('should getPluginFile ok', function() {
+      const expect = path.join(HOME, 'lib/plugins/cache.js');
+      assert.equal(h.getPluginFile('cache.js'), expect);
+      assert.equal(h.getPluginFile('./cache.js'), expect);
+      assert.equal(h.getPluginFile('https://github.com/skygragon/cache.js'), expect);
+    });
+
+    it('should getFileData ok with missing file', function() {
+      assert.equal(h.getFileData('non-exist'), null);
+    });
   }); // #dirAndFiles
 
   describe('#getSetCookieValue', function() {
     it('should ok', function() {
-      var resp = {
+      const resp = {
         headers: {'set-cookie': [
           'key1=value1; path=/; Httponly',
           'key2=value2; path=/; Httponly']
         }
       };
-      var respNoSetCookie = {
+      const respNoSetCookie = {
         headers: {}
       };
 
@@ -198,13 +246,13 @@ describe('helper', function() {
 
   describe('#printSafeHTTP', function() {
     it('should hide sensitive info', function() {
-      var raw = [
+      const raw = [
         "Cookie: 'xxxxxx'",
         "'X-CSRFToken': 'yyyyyy'",
         "'set-cookie': ['zzzzzz']"
       ].join('\r\n');
 
-      var hide = [
+      const hide = [
         'Cookie: <hidden>',
         "'X-CSRFToken': <hidden>",
         "'set-cookie': <hidden>"
@@ -216,8 +264,8 @@ describe('helper', function() {
 
   describe('#readStdin', function() {
     function hijackStdin(data) {
-      var stream = require('stream');
-      var rs = new stream.Readable();
+      const stream = require('stream');
+      const rs = new stream.Readable();
       rs.push(data);
       rs.push(null);
 
@@ -242,4 +290,22 @@ describe('helper', function() {
       });
     });
   }); // #readStdin
+
+  describe('#badge', function() {
+    it('should ok', function() {
+      chalk.enabled = true;
+      assert.equal(h.badge('x'), chalk.white.bgBlue(' x '));
+      assert.equal(h.badge('x', 'green'), chalk.black.bgGreen(' x '));
+    });
+
+    it('should ok with random', function() {
+      const badges = _.values(h.__get__('COLORS'))
+        .map(function(x) {
+          return chalk[x.fg][x.bg](' random ');
+        });
+
+      const i = badges.indexOf(h.badge('random', 'random'));
+      assert.equal(i >= 0, true);
+    });
+  }); // #badge
 });

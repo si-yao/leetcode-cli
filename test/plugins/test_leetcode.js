@@ -1,17 +1,19 @@
-var _ = require('underscore');
-var assert = require('chai').assert;
-var nock = require('nock');
-var rewire = require('rewire');
+'use strict';
+const _ = require('underscore');
+const assert = require('chai').assert;
+const nock = require('nock');
+const rewire = require('rewire');
 
-var config = require('../../lib/config');
-var log = require('../../lib/log');
+const config = require('../../lib/config');
+const chalk = require('../../lib/chalk');
+const log = require('../../lib/log');
 
-var plugin = rewire('../../lib/plugins/leetcode');
-var session = rewire('../../lib/session');
+const plugin = rewire('../../lib/plugins/leetcode');
+const session = rewire('../../lib/session');
 
 describe('plugin:leetcode', function() {
-  var USER = {hash: 'abcdef'};
-  var PROBLEM = {
+  const USER = {hash: 'abcdef'};
+  const PROBLEM = {
     id:     389,
     name:   'Find the Difference',
     slug:   'find-the-difference',
@@ -19,7 +21,7 @@ describe('plugin:leetcode', function() {
     locked: false,
     file:   '/dev/null'
   };
-  var SUBMISSION = {
+  const SUBMISSION = {
     id:      '73790064',
     lang:    'cpp',
     runtime: '9 ms',
@@ -30,12 +32,11 @@ describe('plugin:leetcode', function() {
   before(function() {
     log.init();
     config.init();
+    chalk.init();
     plugin.init();
 
-    session.getUser = function() {
-      return USER;
-    };
-    session.saveUser = function() {};
+    session.getUser = () => USER;
+    session.saveUser = () => {};
     plugin.__set__('session', session);
   });
 
@@ -43,8 +44,7 @@ describe('plugin:leetcode', function() {
     it('should ok', function(done) {
       nock('https://leetcode.com')
         .get('/accounts/login/')
-        .reply(200, '', {
-          'Set-Cookie': [
+        .reply(200, '', { 'Set-Cookie': [
             'csrftoken=LOGIN_CSRF_TOKEN; Max-Age=31449600; Path=/; secure'
           ]});
 
@@ -53,13 +53,17 @@ describe('plugin:leetcode', function() {
         .reply(302, '', {
           'Set-Cookie': [
             'csrftoken=SESSION_CSRF_TOKEN; Max-Age=31449600; Path=/; secure',
-            'LEETCODE_SESSION=SESSION_ID; Max-Age=31449600; Path=/; secure',
-            "messages='Successfully signed in as Eric.'; Max-Age=31449600; Path=/; secure"
+            'LEETCODE_SESSION=SESSION_ID; Max-Age=31449600; Path=/; secure'
           ]});
 
       nock('https://leetcode.com')
         .get('/list/api/questions')
-        .reply(200, JSON.stringify({favorites: {private_favorites: [{id_hash: 'abcdef', name: 'Favorite'}]}}));
+        .reply(200, JSON.stringify({
+          user_name: 'Eric',
+          favorites: {
+            private_favorites: [{id_hash: 'abcdef', name: 'Favorite'}]
+          }
+        }));
 
       plugin.login({}, function(e, user) {
         assert.equal(e, null);
@@ -158,7 +162,7 @@ describe('plugin:leetcode', function() {
     });
 
     it('should fail if not login', function(done) {
-      config.AUTO_LOGIN = false;
+      config.autologin.enable = false;
       nock('https://leetcode.com')
         .get('/api/problems/algorithms/')
         .replyWithFile(200, './test/mock/problems.nologin.json.20161015');
@@ -444,8 +448,6 @@ describe('plugin:leetcode', function() {
     });
 
     it('should ok after delay', function(done) {
-      this.timeout(5000);
-
       nock('https://leetcode.com')
         .post('/problems/find-the-difference/submit/')
         .reply(200, '{"error": "You run code too soon"}');
@@ -466,7 +468,7 @@ describe('plugin:leetcode', function() {
         assert.equal(results[0].ok, true);
         done();
       });
-    });
+    }).timeout(5000);
 
     it('should fail if server error', function(done) {
       nock('https://leetcode.com')
@@ -534,7 +536,7 @@ describe('plugin:leetcode', function() {
 
   describe('#getSubmissions', function() {
     it('should ok', function(done) {
-      var problem = {
+      const problem = {
         id:     1,
         name:   'Two Sum',
         slug:   'two-sum',
@@ -642,7 +644,7 @@ describe('plugin:leetcode', function() {
       plugin.getFavorites(function(e, favorites) {
         assert.equal(e, null);
 
-        var my = favorites.favorites.private_favorites;
+        const my = favorites.favorites.private_favorites;
         assert.equal(my.length, 1);
         assert.equal(my[0].name, 'Favorite');
         assert.equal(my[0].id_hash, 'abcdefg');
@@ -650,4 +652,68 @@ describe('plugin:leetcode', function() {
       });
     });
   }); // #getFavorites
+
+  describe('#session', function() {
+    const DATA = {sessions: []};
+
+    it('should getSessions ok', function(done) {
+      nock('https://leetcode.com')
+        .post('/session/')
+        .reply(200, JSON.stringify(DATA));
+
+      plugin.getSessions(function(e, sessions) {
+        assert.notExists(e);
+        assert.deepEqual(sessions, []);
+        done();
+      });
+    });
+
+    it('should activateSessions ok', function(done) {
+      nock('https://leetcode.com')
+        .put('/session/', {func: 'activate', target: 1})
+        .reply(200, JSON.stringify(DATA));
+
+      plugin.activateSession({id: 1}, function(e, sessions) {
+        assert.notExists(e);
+        assert.deepEqual(sessions, []);
+        done();
+      });
+    });
+
+    it('should createSessions ok', function(done) {
+      nock('https://leetcode.com')
+        .put('/session/', {func: 'create', name: 's1'})
+        .reply(200, JSON.stringify(DATA));
+
+      plugin.createSession('s1', function(e, sessions) {
+        assert.notExists(e);
+        assert.deepEqual(sessions, []);
+        done();
+      });
+    });
+
+    it('should deleteSessions ok', function(done) {
+      nock('https://leetcode.com')
+        .delete('/session/', {target: 1})
+        .reply(200, JSON.stringify(DATA));
+
+      plugin.deleteSession({id: 1}, function(e, sessions) {
+        assert.notExists(e);
+        assert.deepEqual(sessions, []);
+        done();
+      });
+    });
+
+    it('should fail if 302 returned', function(done) {
+      nock('https://leetcode.com')
+        .post('/session/')
+        .reply(302);
+
+      plugin.getSessions(function(e, sessions) {
+        assert.deepEqual(e, session.errors.EXPIRED);
+        assert.notExists(sessions);
+        done();
+      });
+    });
+  }); // #session
 });

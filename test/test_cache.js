@@ -1,60 +1,48 @@
-var execSync = require('child_process').execSync;
+'use strict';
+const assert = require('chai').assert;
+const rewire = require('rewire');
 
-var assert = require('chai').assert;
-var rewire = require('rewire');
-
-var cache = rewire('../lib/cache');
-var h = rewire('../lib/helper');
+const th = require('./helper');
 
 describe('cache', function() {
-  var k = '.test';
-  var v = {test: 'data'};
+  let cache;
 
-  before(function() {
-    var cachedir = './tmp';
-    execSync('rm -rf ' + cachedir);
+  const K = '.test';
+  const V = {test: 'data'};
 
-    h.getCacheDir = function() {
-      return cachedir;
-    };
+  beforeEach(function() {
+    th.clean();
+
+    const h = rewire('../lib/helper');
+    h.getCacheDir = () => th.DIR;
+
+    cache = rewire('../lib/cache');
     cache.__set__('h', h);
+    cache.init();
   });
 
-  it('should ok when not cached', function() {
-    cache.del(k);
-
-    assert.equal(cache.get(k), null);
-    assert.equal(cache.del(k), false);
+  it('should get ok when not cached', function() {
+    cache.del(K);
+    assert.equal(cache.get(K), null);
+    assert.equal(cache.del(K), false);
   });
 
-  it('should ok when cached', function() {
-    assert.equal(cache.set(k, v), true);
-
-    assert.deepEqual(cache.get(k), v);
-    assert.equal(cache.del(k), true);
+  it('should get ok when cached', function() {
+    assert.equal(cache.set(K, V), true);
+    assert.deepEqual(cache.get(K), V);
+    assert.equal(cache.del(K), true);
   });
 
   it('should list ok when no cached', function() {
-    var items = cache.list();
+    const items = cache.list();
     assert.equal(items.length, 0);
   });
 
   it('should list ok when cached', function() {
-    assert.equal(cache.set(k, v), true);
-
-    var items = cache.list();
+    assert.equal(cache.set(K, V), true);
+    const items = cache.list();
     assert.equal(items.length, 1);
-
-    assert.equal(items[0].name, k);
-    assert.equal(items[0].size, JSON.stringify(v).length);
-  });
-
-  it('should list ok when cache dir not exist', function() {
-    h.getCacheDir = function() {
-      return '/not-exist-dir';
-    };
-
-    var items = cache.list();
-    assert.equal(items.length, 0);
+    assert.equal(items[0].name, K);
+    assert.equal(items[0].size, JSON.stringify(V).length);
   });
 });

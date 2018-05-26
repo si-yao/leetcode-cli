@@ -3,21 +3,45 @@ layout: default
 title: Advanced Topic
 ---
 
+* [Aliases](#aliases)
 * [Auto Login](#auto-login)
 * [Bash Completion](#bash-completion)
 * [Cache](#cache)
 * [Configuration](#configuration)
-* [Color Theme](#color-theme)
-* [Log Level](#log-level)
+* [Color Themes](#color-themes)
+* [Log Levels](#log-levels)
 * [Plugins](#plugins)
 
-# Auto login
+# Aliases
+
+The commands in leetcode-cli usually has builtin aliases as below:
+
+|Command   |Aliases                |
+|----------|-----------------------|
+|config    |conf, cfg, setting     |
+|list      |ls                     |
+|plugin    |extension, ext         |
+|session   |branch                 |
+|show      |view, pick             |
+|star      |like, favorite         |
+|stat      |stats, progress, report|
+|submission|pull                   |
+|submit    |push, commit           |
+|test      |run                    |
+|user      |account                |
+|version   |info, env              |
+
+# Auto Login
 
 Leetcode.com is restricting only one session alive in the same time, which means if you login same account otherwhere, the existing login session will be expired immediately. This will greatly harm your experience since you have to re-login again and again among different sessions.
 
 The good news is leetcode-cli will help a lot on this by trying re-login transparently and automatically without interrupting your current work whenever it detects your current session is expired. To enable this feature you could add following in your config then login again:
 
-	"AUTO_LOGIN": true
+    {
+        "autologin": {
+            "enable": true
+        }
+    }
 
 **NOTE: once enabled, your PASSWORD will be persisted locally for further using, so PLEASE be careful to ONLY enable this on your OWN computer for the sake of security!**
 
@@ -25,12 +49,12 @@ The good news is leetcode-cli will help a lot on this by trying re-login transpa
 
 Copy `.lc-completion.bash` to your home directory, and source it in .bashrc (Linux) or .bash_profile (MacOS).
 
-	$ cp .lc-completion.bash ~
-	$ echo "source ~/.lc-completion.bash" >> ~/.bashrc
-	$ source ~/.bashrc
+    $ cp .lc-completion.bash ~
+    $ echo "source ~/.lc-completion.bash" >> ~/.bashrc
+    $ source ~/.bashrc
 
-	$ leetcode list --<tab>
-	--help     --keyword  --query    --stat
+    $ leetcode list --<tab>
+    --help     --keyword  --query    --stat
 
 **NOTE: it might become slower in bash with this enabled, personally I would NOT suggest to use it...**
 
@@ -38,80 +62,100 @@ Copy `.lc-completion.bash` to your home directory, and source it in .bashrc (Lin
 
 The local cache folder (`.lc/`) is in your home directory, e.g.
 
-	$ ls -a1 ~/.lc/
+    $ ls -a1 ~/.lc/
+    cache                        # folder of cached questions
+    config.json                  # user customized config
+    user.json                    # user account info
 
-	.user.json                      # your account info
-	problems.json                   # problems list
-	1.two-sum.algorithms.json       # specific problem info
+    $ ls -a1 ~/.lc/cache/
+    problems.json                # cached questions list
+    1.two-sum.algorithms.json    # cached specific question
 
-Normally you don't need dig into the folder to manipulate those files. Use [cache command](https://skygragon.github.io/leetcode-cli/commands#cache) instead.
+**NOTE: Normally you don't need dig into the folder to manipulate those files. Use [cache command](https://skygragon.github.io/leetcode-cli/commands#cache) instead.**
 
 # Configuration
 
-Create a JSON file named `.lcconfig` in your home directory, e.g.
+The config file is saved in `~/.lc/config.json`, here is a full exmaple (includes default configs):
 
-	$ cat ~/.lcconfig
+    $ cat ~/.lc/config.json
 
-	{
-		"LANG": "java",
-		"EDITOR": "vim",
-		"USE_COLOR": true,
-		"COLOR_THEME": "default",
-		"AUTO_LOGIN": false,
-		"PLUGINS": {}
-	}
+    {
+        "auto_login": {
+            "enable": false
+        },
+        "code": {
+            "editor": "vim",
+            "lang": "cpp"
+        },
+        "color": {
+            "enable": true,
+            "theme": "default"
+        },
+        "icon": {
+            "theme": ""
+        },
+        "network": {
+            "concurrency": 10
+        },
+        "plugins": {}
+    }
 
 Here are some useful settings:
 
-* `AUTO_LOGIN` to enable auto login feature, see [Auto Login](#auto-login).
-* `COLOR_THEME` to set color theme used in output, see [Color Theme](#color-theme).
-* `EDITOR` to set editor used to open generated source file.
-* `ICON_THEME` to set icon them used in output.
-* `LANG` to set your default language used in coding.
-* `USE_COLOR` to enable colorful output.
-* `PLUGINS` to config each installed plugins, see [Plugins](#plugins).
+* `autologin:enable` to enable auto login feature. (see [Auto Login](#auto-login))
+* `code:editor` to set editor used to open generated source file.
+* `code:lang` to set your default language used in coding.
+* `color:enable` to enable colorful output.
+* `color:theme` to set color theme used in output. (see [Color Theme](#color-theme))
+* `icon:theme` to set icon them used in output.
+* `plugins` to config each installed plugins. (see [Plugins](#plugins))
+
+**NOTE: Normally you don't need dig into the folder to manipulate those files. Use [config command](https://skygragon.github.io/leetcode-cli/commands#config) instead.**
 
 *Example*
 
 Config for `github.js` and `cpp.lint.js` plugins:
 
-	{
-		"PLUGINS": {
-			"github": {
-				"repo": "https://github.com/skygragon/test",
-				"token": "abcdefghijklmnopqrstuvwxyz"
-			},
-			"cpp.lint": {
-				"bin": "~/bin/cpplibt.py",
-				"flags": []
-			}
-		}
-	}
+    {
+        "plugins": {
+            "github": {
+                "repo": "https://github.com/skygragon/test",
+                "token": "abcdefghijklmnopqrstuvwxyz"
+            },
+            "cpp.lint": {
+                "bin": "~/bin/cpplibt.py",
+                "flags": []
+            }
+        }
+    }
 
-# Color Theme
+# Color Themes
 
 You can choose to use colorful output or not.
 
 * `--color` to enable color.
 * `--no-color` to disable it.
 
-Or use configuration setting to avoid typing it repeatedly, see [USE_COLOR](#configuration).
+Or use configuration setting to avoid typing it repeatedly. (see [color:enable](#configuration))
 
-When color is enabled, you can choose your favor color theme as well, see [COLOR_THEME](#configuration).
+When color is enabled, you can choose your favor color theme as well. (see [color:theme](#configuration))
 
 Following are available themes:
 
 * `blue`
-* `default`
 * `dark` for night.
+* `default`
+* `molokai`
 * `orange`
 * `pink` for girls.
+* `solarized`
+* `solarized.light`
 
-Of course you can create your own themes if you like, please see `colors` folder in the source code.
+Of course you can create your own themes if you like, look into `colors` folder in the source code for more tips.
 
 *Example*
 
-	$ cat colors/default.json
+    $ cat colors/default.json
     {
         "black":   "#000000",
         "blue":    "#0000ff",
@@ -123,11 +167,11 @@ Of course you can create your own themes if you like, please see `colors` folder
         "yellow":  "#ffff00"
     }
 
-# Log Level
+# Log Levels
 
 * `-v` to enable debug output.
 * `-vv` to enable trace output.
-	* Will print detailed HTTP requests/responses.
+    * Will print detailed HTTP requests/responses.
 
 # Plugins
 
